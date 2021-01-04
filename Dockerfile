@@ -10,7 +10,7 @@ ENV PYTHONPATH $PYTHONPATH:/usr/local/lib/python3/dist-packages/:/root/
 WORKDIR /root
 
 RUN apt-get update && \
-    apt-get install -y software-properties-common git python3 python3-pip libjpeg-dev libtiff5-dev libpng-dev libfreetype6-dev libgif-dev libgtk-3-dev libxml2-dev libpango1.0-dev libcairo2-dev libspiro-dev libuninameslist-dev python3-dev ninja-build cmake build-essential wget unzip zip rename && \
+    apt-get install -y software-properties-common git python3 python3-pip libjpeg-dev libtiff5-dev libpng-dev libfreetype6-dev libgif-dev libgtk-3-dev libxml2-dev libpango1.0-dev libcairo2-dev libspiro-dev libuninameslist-dev python3-dev ninja-build curl cmake build-essential wget unzip zip rename && \
     add-apt-repository -y ppa:fontforge/fontforge && \
     apt-get update  && apt-get clean
 
