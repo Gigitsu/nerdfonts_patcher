@@ -1,0 +1,81 @@
+name: Release JetBrains Mono Nerd Font
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    container:
+      image:  docker.pkg.github.com/gigitsu/nerdfonts_patcher/fontforge:20200314-18.04
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download font JetBrains Mono
+        id: download_font
+        run: |
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/v\(.*\),\1,')
+
+          wget https://github.com/JetBrains/JetBrainsMono/releases/download/v$VERSION/JetBrainsMono-$VERSION.zip
+
+          unzip JetBrainsMono-$VERSION.zip
+
+          mv $(find . -type d -name "ttf") ./input_fonts
+
+          echo "::set-output name=VERSION::$VERSION"
+
+      - name: Patch fonts
+        run: |
+          mkdir patched
+          mkdir patched_mono
+
+          for font in ./input_fonts/*.ttf; do python3 /root/nerdfonts/gg-font-patcher -c -q --careful --out patched/ $font; done;
+          for font in ./input_fonts/*.ttf; do python3 /root/nerdfonts/gg-font-patcher -s -c -q --careful --out patched_mono/ $font; done;
+
+          rename -v 's/ Italic/-Italic/' patched*/*.ttf
+          rename -v 's/JetBrains Mono /JetBrainsMono-/' patched*/*.ttf
+          rename -v 's/Nerd/-Nerd/' patched*/*.ttf
+          rename -v 's/ //g' patched*/*.ttf
+
+          zip -r -j JetBrainsMonoNerdFontComplete-${{ steps.download_font.outputs.VERSION }}.zip patched/
+          zip -r -j JetBrainsMonoNerdFontCompleteMono-${{ steps.download_font.outputs.VERSION }}.zip patched_mono/
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_name: JetBrains Mono Nerd Font ${{ steps.download_font.outputs.VERSION }}
+          tag_name: ${{ github.ref }}
+          body: Patched version ${{ steps.download_font.outputs.VERSION }} of JetBrains Mono 
+          draft: false
+          prerelease: false
+
+      - name: Upload JetBrains Mono patched fonts
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./JetBrainsMonoNerdFontComplete-${{ steps.download_font.outputs.VERSION }}.zip
+          asset_name: JetBrainsMonoNerdFontComplete-${{ steps.download_font.outputs.VERSION }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload JetBrains Mono patched fonts mono
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./JetBrainsMonoNerdFontCompleteMono-${{ steps.download_font.outputs.VERSION }}.zip
+          asset_name: JetBrainsMonoNerdFontCompleteMono-${{ steps.download_font.outputs.VERSION }}.zip
+          asset_content_type: application/zip
