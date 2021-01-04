@@ -1,0 +1,219 @@
+#!/usr/bin/env python
+# coding=utf8
+
+version = "2.1.0"
+projectName = "Nerd Fonts"
+projectNameAbbreviation = "NF"
+projectNameSingular = projectName[:-1]
+
+import re
+import os
+import sys
+import nerdfonts
+
+from nerdfonts.font_patcher import font_patcher, check_fontforge_min_version, replace_font_name
+
+class gg_font_patcher(font_patcher):
+    def __init__(self):
+        super().__init__()
+
+    def setup_font_names(self):
+        verboseAdditionalFontNameSuffix = " " + projectNameSingular
+
+        if self.args.windows:  # attempt to shorten here on the additional name BEFORE trimming later
+            additionalFontNameSuffix = " " + projectNameAbbreviation
+        else:
+            additionalFontNameSuffix = verboseAdditionalFontNameSuffix
+
+        if not self.args.complete:
+            # NOTE not all symbol fonts have appended their suffix here
+            if self.args.fontawesome:
+                additionalFontNameSuffix += " A"
+                verboseAdditionalFontNameSuffix += " Plus Font Awesome"
+            if self.args.fontawesomeextension:
+                additionalFontNameSuffix += " AE"
+                verboseAdditionalFontNameSuffix += " Plus Font Awesome Extension"
+            if self.args.octicons:
+                additionalFontNameSuffix += " O"
+                verboseAdditionalFontNameSuffix += " Plus Octicons"
+            if self.args.powersymbols:
+                additionalFontNameSuffix += " PS"
+                verboseAdditionalFontNameSuffix += " Plus Power Symbols"
+            if self.args.pomicons:
+                additionalFontNameSuffix += " P"
+                verboseAdditionalFontNameSuffix += " Plus Pomicons"
+            if self.args.fontlinux:
+                additionalFontNameSuffix += " L"
+                verboseAdditionalFontNameSuffix += " Plus Font Logos (Font Linux)"
+            if self.args.material:
+                additionalFontNameSuffix += " MDI"
+                verboseAdditionalFontNameSuffix += " Plus Material Design Icons"
+            if self.args.weather:
+                additionalFontNameSuffix += " WEA"
+                verboseAdditionalFontNameSuffix += " Plus Weather Icons"
+
+        # if all source glyphs included simplify the name
+        else:
+            additionalFontNameSuffix += " Complete"
+            verboseAdditionalFontNameSuffix += " Complete"
+
+        # add mono signifier to end of name
+        if self.args.single:
+            additionalFontNameSuffix += " Mono"
+            verboseAdditionalFontNameSuffix += " Mono"
+
+        # basically split the font name around the dash "-" to get the fontname and the style (e.g. Bold)
+        # this does not seem very reliable so only use the style here as a fallback if the font does not
+        # have an internal style defined (in sfnt_names)
+        # using '([^-]*?)' to get the item before the first dash "-"
+        # using '([^-]*(?!.*-))' to get the item after the last dash "-"
+        fontname, fallbackStyle = re.match("^([^-]*).*?([^-]*(?!.*-))$", self.sourceFont.fontname).groups()
+
+        familyname = self.sourceFont.familyname
+
+        # fullname (filename) can always use long/verbose font name, even in windows
+        if self.sourceFont.fullname != None:
+            fullname = self.sourceFont.fullname + verboseAdditionalFontNameSuffix
+        else:
+            fullname = self.sourceFont.cidfontname + verboseAdditionalFontNameSuffix
+
+        fontname = fontname + additionalFontNameSuffix.replace(" ", "")
+
+        sfntNames = {}
+        for name in self.sourceFont.sfnt_names:
+            sfntNames[name[1]] = name
+
+        # String ID is at the second index in the Tuple lists
+        sfntNamesStringIDIndex = 2
+
+        if "Preferred Family" in sfntNames:
+            # now we have the correct item:
+            preferredFamily = sfntNames["Preferred Family"][sfntNamesStringIDIndex]
+        else:
+            # Could not find 'Preferred Family' for given font, falling back to parsed fontname
+            preferredFamily = familyname
+
+        # let us try to get the 'style' from the font info in sfnt_names and fallback to the
+        # parse fontname if it fails:
+        if "SubFamily" in sfntNames:
+            # now we have the correct item:
+            subFamily = sfntNames["SubFamily"][sfntNamesStringIDIndex]
+        else:
+            sys.stderr.write("{}: Could not find 'SubFamily' for given font, falling back to parsed fontname\n".format(projectName))
+            subFamily = fallbackStyle
+
+        # some fonts have inaccurate 'SubFamily', if it is Regular let us trust the filename more:
+        if subFamily == "Regular":
+            subFamily = fallbackStyle
+
+        if self.args.windows:
+            maxFamilyLength = 31
+            maxFontLength = maxFamilyLength - len('-' + subFamily)
+            familyname += " " + projectNameAbbreviation
+            fullname += " Windows Compatible"
+
+            # now make sure less than 32 characters name length
+            if len(fontname) > maxFontLength:
+                fontname = fontname[:maxFontLength]
+            if len(familyname) > maxFamilyLength:
+                familyname = familyname[:maxFamilyLength]
+        else:
+            familyname += " " + projectNameSingular
+            preferredFamily += " " + projectNameSingular
+            if self.args.single:
+                familyname += " Mono"
+                preferredFamily += " Mono"
+
+        # Use the fallbackStyle cause some fonts use font name and preferred family to groum more styles.
+        # MacOS treats fonts with the same name as the same font, even if subFamily is different.
+        fontname += '-' + fallbackStyle
+
+        # rename font
+        #
+        # comply with SIL Open Font License (OFL)
+        reservedFontNameReplacements = {
+            'source'         : 'sauce',
+            'Source'         : 'Sauce',
+            'hermit'         : 'hurmit',
+            'Hermit'         : 'Hurmit',
+            'hasklig'        : 'hasklug',
+            'Hasklig'        : 'Hasklug',
+            'Share'          : 'Shure',
+            'share'          : 'shure',
+            'IBMPlex'        : 'Blex',
+            'ibmplex'        : 'blex',
+            'IBM-Plex'       : 'Blex',
+            'IBM Plex'       : 'Blex',
+            'terminus'       : 'terminess',
+            'Terminus'       : 'Terminess',
+            'liberation'     : 'literation',
+            'Liberation'     : 'Literation',
+            'iAWriter'       : 'iMWriting',
+            'iA Writer'      : 'iM Writing',
+            'iA-Writer'      : 'iM-Writing',
+            'Anka/Coder'     : 'AnaConder',
+            'anka/coder'     : 'anaconder',
+            'Cascadia Code'  : 'Caskaydia Cove',
+            'cascadia code'  : 'caskaydia cove',
+            'CascadiaCode'   : 'CaskaydiaCove',
+            'cascadiacode'   : 'caskaydiacove'
+        }
+
+        # remove overly verbose font names
+        # particularly regarding Powerline sourced Fonts (https://github.com/powerline/fonts)
+        additionalFontNameReplacements = {
+            'for Powerline': '',
+            'ForPowerline': ''
+        }
+
+        additionalFontNameReplacements2 = {
+            'Powerline': ''
+        }
+
+        projectInfo = (
+            "Patched with '" + projectName + " Patcher' (https://github.com/ryanoasis/nerd-fonts)\n\n"
+            "* Website: https://www.nerdfonts.com\n"
+            "* Version: " + version + "\n"
+            "* Development Website: https://github.com/ryanoasis/nerd-fonts\n"
+            "* Changelog: https://github.com/ryanoasis/nerd-fonts/blob/master/changelog.md"
+        )
+
+        familyname = replace_font_name(familyname, reservedFontNameReplacements)
+        fullname   = replace_font_name(fullname,   reservedFontNameReplacements)
+        fontname   = replace_font_name(fontname,   reservedFontNameReplacements)
+        familyname = replace_font_name(familyname, additionalFontNameReplacements)
+        fullname   = replace_font_name(fullname,   additionalFontNameReplacements)
+        fontname   = replace_font_name(fontname,   additionalFontNameReplacements)
+        familyname = replace_font_name(familyname, additionalFontNameReplacements2)
+        fullname   = replace_font_name(fullname,   additionalFontNameReplacements2)
+        fontname   = replace_font_name(fontname,   additionalFontNameReplacements2)
+
+        # replace any extra whitespace characters:
+        self.sourceFont.familyname = " ".join(familyname.split())
+        self.sourceFont.fullname   = " ".join(fullname.split())
+        self.sourceFont.fontname   = " ".join(fontname.split())
+
+        self.sourceFont.appendSFNTName(str('English (US)'), str('Preferred Family'), preferredFamily)
+        self.sourceFont.appendSFNTName(str('English (US)'), str('Family'), self.sourceFont.familyname)
+        self.sourceFont.appendSFNTName(str('English (US)'), str('Compatible Full'), self.sourceFont.fullname)
+        self.sourceFont.appendSFNTName(str('English (US)'), str('SubFamily'), subFamily)
+        self.sourceFont.comment = projectInfo
+        self.sourceFont.fontlog = projectInfo
+
+        # TODO version not being set for all font types (e.g. ttf)
+        # print("Version was {}".format(sourceFont.version))
+        if self.sourceFont.version != None:
+            self.sourceFont.version += ";" + projectName + " " + version
+        else:
+            self.sourceFont.version = str(self.sourceFont.cidversion) + ";" + projectName + " " + version
+        # print("Version now is {}".format(sourceFont.version))
+
+def main():
+    check_fontforge_min_version()
+    patcher = gg_font_patcher()
+    patcher.patch()
+
+
+if __name__ == "__main__":
+    nerdfonts.font_patcher.__dir__ = os.path.dirname(os.path.abspath(__file__))
+    main()
