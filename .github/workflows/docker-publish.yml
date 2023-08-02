@@ -29,6 +29,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            nf${{ inputs.nf_version }}-ff${{ inputs.ff_version }}
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
@@ -37,4 +44,5 @@ jobs:
             FONT_FORGE_VERSION=${{ inputs.ff_version }}
           context: ./patcher
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:nf${{ inputs.nf_version }}-ff${{ inputs.ff_version }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
