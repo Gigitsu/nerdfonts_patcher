@@ -1,5 +1,5 @@
 name: Publish patcher image
-run-name: ${{ format('Publish runner image with FonteForge {0} and NerdFonts {1}', inputs.ff_version, inputs.nf_version) }}
+run-name: ${{ format('Publish runner image with NerdFonts {0} and FonteForge {1}', inputs.nf_version, inputs.ff_version) }}
 
 on:
   workflow_dispatch:
