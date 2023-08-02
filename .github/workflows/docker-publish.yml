@@ -1,0 +1,46 @@
+name: Publish patcher image
+run-name: ${{ format('Publish runner image with FonteForge {0} and NerdFonts {1}', inputs.ff_version, inputs.nf_version) }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ff_version:
+        description: 'FontForge version'
+        required: true
+      nf_version:
+        description: 'NerdFonts version'
+        required: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: patcher
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git clone the repository
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} 
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          build-args: |
+            NERD_FONTS_VERSION=${{ inputs.nf_version}}
+            FONT_FORGE_VERSION=${{ inputs.ff_version}}
+          context: ./patcher
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
