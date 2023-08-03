@@ -1,14 +1,11 @@
 name: Publish patcher image
-run-name: ${{ format('Publish runner image with NerdFonts {0} and FonteForge {1}', inputs.nf_version, inputs.ff_version) }}
+run-name: ${{ format('Publish runner image with NerdFonts {0}', inputs.nf_version) }}
 
 on:
   workflow_dispatch:
     inputs:
       nf_version:
         description: 'NerdFonts version'
-        required: true
-      ff_version:
-        description: 'FontForge version'
         required: true
 
 env:
@@ -26,22 +23,21 @@ jobs:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}
           tags: |
-            nf${{ inputs.nf_version }}-ff${{ inputs.ff_version }}
+            nf${{ inputs.nf_version }}
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
           build-args: |
             NERD_FONTS_VERSION=${{ inputs.nf_version }}
-            FONT_FORGE_VERSION=${{ inputs.ff_version }}
           context: ./patcher
           push: true
           tags: ${{ steps.meta.outputs.tags }}

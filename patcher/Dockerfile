@@ -1,10 +1,9 @@
 FROM alpine:latest
 
 ARG NERD_FONTS_VERSION
-ARG FONT_FORGE_VERSION
 
 RUN apk update && apk upgrade && \
-    apk add --no-cache fontforge=${FONT_FORGE_VERSION} --repository=https://dl-cdn.alpinelinux.org/alpine/latest-stable/community && \
+    apk add --no-cache fontforge --repository=https://dl-cdn.alpinelinux.org/alpine/latest-stable/community && \
     apk add --no-cache curl py3-pip unzip && \
     pip install configparser
 
@@ -13,5 +12,7 @@ RUN curl -L https://github.com/ryanoasis/nerd-fonts/releases/download/v${NERD_FO
     rm -f FontPatcher.zip
 
 ENV PYTHONIOENCODING=utf-8
+
+ENV NERD_FONTS_VERSION=${NERD_FONTS_VERSION}
 
 WORKDIR /patcher
