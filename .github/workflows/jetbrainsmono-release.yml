@@ -43,10 +43,8 @@ jobs:
       - name: Git clone the repository
         uses: actions/checkout@v3
       - name: Download font JetBrains Mono
-        env:
-          VERSION: ${{inputs.jbm_version}}
         run: |
-          curl https://github.com/JetBrains/JetBrainsMono/releases/download/v$VERSION/JetBrainsMono-$VERSION.zip -o JetBrainsMono.zip
+          curl https://github.com/JetBrains/JetBrainsMono/releases/download/v${{ inputs.jbm_version }}/JetBrainsMono-${{ inputs.jbm_version }}.zip -o JetBrainsMono.zip
           unzip JetBrainsMono.zip -d ./in
       - name: Patch fonts
         run: |
