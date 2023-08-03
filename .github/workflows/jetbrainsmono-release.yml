@@ -50,8 +50,8 @@ jobs:
         run: |
           mkdir out out_mono
 
-          for f in ./in/fonts/ttf/*.ttf; do [ -f "$f" ] && fontforge -script ./font-patcher --outputdir ./out --complete --adjust-line-height --careful --quiet --makegroups 0 "$f"; done
-          for f in ./in/fonts/ttf/*.ttf; do [ -f "$f" ] && fontforge -script ./font-patcher --outputdir ./out --complete --mono --adjust-line-height --careful --quiet --makegroups 0 "$f"; done
+          for f in ./in/fonts/ttf/*.ttf; do [ -f "$f" ] && fontforge -script /patcher/font-patcher --outputdir ./out --complete --adjust-line-height --careful --quiet --makegroups 0 "$f"; done
+          for f in ./in/fonts/ttf/*.ttf; do [ -f "$f" ] && fontforge -script /patcher/font-patcher --outputdir ./out --complete --mono --adjust-line-height --careful --quiet --makegroups 0 "$f"; done
 
           ls -l out
           ls -l out_mono
